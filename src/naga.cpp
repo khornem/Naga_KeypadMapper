@@ -29,16 +29,9 @@ const char * devices[][2] = {
 
 class NagaDaemon {
 	struct input_event ev1[64], ev2[64];
-	int id, side_btn_fd, extra_btn_fd, rd, rd1,rd2, value, size;
-	vector<string> args;
-	vector<int> options;
-	
-	string keyop = "xdotool key --window getactivewindow ";
-	string clickop = "xdotool click --window getactivewindow ";
-	string workspace_r = "xdotool set_desktop --relative -- ";
-	string workspace = "xdotool set_desktop ";
-	string command;
-
+	int id, side_btn_fd, extra_btn_fd, size;
+	vector<vector<string>> args;
+	vector<vector<int>> options;
 
 public:
 	NagaDaemon(int argc, char *argv[]) 
@@ -60,7 +53,7 @@ public:
 			id = 2;
 		else
 		{
-			printf("Not valid device. Exiting.\n");
+			printf("Not a valid device. Exiting.\n");
 			exit(1);
 		}
 			
@@ -68,12 +61,12 @@ public:
 		//Open Devices
 		if ((side_btn_fd = open(devices[id][0], O_RDONLY)) == -1)
 		{
-			printf("%s is not a vaild device or you don't have the permission to access it.\n", devices[id][0]);
+			printf("%s is not a valid device or you don't have the permission to access it.\n", devices[id][0]);
 			exit(1);
 		}
 		if ((extra_btn_fd = open(devices[id][1],O_RDONLY)) == -1)
 		{
-			printf("%s is not a vaild device or you don't have the permission to access it.\n", devices[id][1]);
+			printf("%s is not a valid device or you don't have the permission to access it.\n", devices[id][1]);
 			exit(1);
 		}
 		//Print Device Name
@@ -82,6 +75,8 @@ public:
 
 	void load_conf(string path) 
 	{
+		args.clear();
+		options.clear();
 		args.resize(DEV_NUM_KEYS+EXTRA_BUTTONS);
 		options.resize(DEV_NUM_KEYS+EXTRA_BUTTONS);
 
@@ -109,14 +104,20 @@ public:
 			line = line.substr(pos + 1);
 			//Encode and store mapping
 			pos = atoi(token1.c_str()) - 1;
-			if (token2 == "chmap")options[pos] = 0;
-			else if (token2 == "key")options[pos] = 1;
-			else if (token2 == "run")options[pos] = 2;
-			else if (token2 == "click")options[pos] = 3;
-			else if (token2 == "workspace_r")options[pos] = 4;
-			else if (token2 == "workspace")options[pos] = 5;
+			if (token2 == "chmap") options[pos].push_back( 0);
+			else if (token2 == "key") options[pos].push_back( 1);
+			else if (token2 == "run") options[pos].push_back( 2);
+			else if (token2 == "click") options[pos].push_back( 3);
+			else if (token2 == "workspace_r") options[pos].push_back( 4);
+			else if (token2 == "workspace") options[pos].push_back( 5);
+			else if (token2 == "position") {
+				options[pos].push_back( 6);
+				std::replace(line.begin(),line.end(), ',', ' ');
+			}
+			else if (token2 == "delay") options[pos].push_back( 7);
 			else printf("Not supported key action, check the syntax in mapping_01.txt!\n");
-			args[pos] = line;
+			//cerr << "b) len: " << len << " pos: " << pos << " line: " << line << " args[pos] size:" << args[pos].size() << "\n"; 
+			args[pos].push_back(line);
 			if (pos == DEV_NUM_KEYS+EXTRA_BUTTONS-1) 
 				break; //Only 12 keys for the Naga + 2 buttons on the top
 		}
@@ -124,6 +125,7 @@ public:
 
 	void run() 
 	{
+		int rd, rd1, rd2;
 		fd_set readset;		
 		
 		while (1) 
@@ -140,54 +142,101 @@ public:
 				if (rd1 == -1) exit(2);
 
 				if (ev1[0].value != ' ' && ev1[1].value == 1 && ev1[1].type == 1)  // Only read the key press event
-					for (int i = 0; i < DEV_NUM_KEYS; i++)//For all keys
-						if (ev1[1].code == (i + 2)) //If code i+2 is on (Only for naga)
-							chooseAction(i);
+					switch(ev1[1].code)
+					{
+						case 2:
+						case 3:
+						case 4:
+						case 5:
+						case 6:
+						case 7:
+						case 8:
+						case 9:
+						case 10:
+						case 11:
+						case 12:
+						case 13:
+							chooseAction(ev1[1].code-2);
+							break;
+						// do nothing on default
+					}
+			
 			}
 			else // Extra buttons
 			{
 				rd2 = read(extra_btn_fd, ev2, size * 64);
 				if (rd2 == -1) exit(2);
 
-				if ((ev2[1].code == 275 || ev2[1].code == 276) && ev2[1].value == 1 ) //Only extra buttons
-					for(int i = DEV_NUM_KEYS; i < DEV_NUM_KEYS+EXTRA_BUTTONS;i++)
-						if(ev2[1].code == i+263) // Only line 13 and 14
-							chooseAction(i);
+				if (ev2[1].type == 1 && ev2[1].value == 1 ) //Only extra buttons
+					switch(ev2[1].code)
+					{
+						case 275:
+						case 276:
+							chooseAction(ev2[1].code-263);
+							break;
+						// do nothing on default
+					}
+
 			}
 		}
 	}
 	
-	void chooseAction(int i) 
+	void chooseAction(int i)
 	{
+		const string keyop = "xdotool key --window getactivewindow ";
+		const string clickop = "xdotool click --window getactivewindow ";
+		const string workspace_r = "xdotool set_desktop --relative -- ";
+		const string workspace = "xdotool set_desktop ";
+		const string position = "xdotool mousemove ";
+
 		int pid;
-		switch (options[i]) {
-			case 0: //switch mapping
-				this->load_conf(args[i]);
-				break;
-			case 1: //key
-				command = keyop + args[i];
-				break;
-			case 2: //run system command
-				command = "setsid " + args[i] + " &";
-				break;
-			case 3: //click
-				command = clickop + args[i];
-				break;
-			case 4: //move to workspace(relative)
-				command = workspace_r + args[i];
-				break;
-			case 5: //move to workspace(absolute)
-				command = workspace + args[i];
-				break;
+		unsigned int delay;
+		string command;
+		bool execution;
+		for (int j = 0; j < options[i].size(); j++){
+			//cerr << "key: " << i << " action: " << j << " args: " << args[i][j] << "\n" ;
+			execution = true;
+			switch (options[i][j]) {
+				case 0: //switch mapping
+					this->load_conf(args[i][j]);
+					execution = false;
+					break;
+				case 1: //key
+					command = keyop + args[i][j];
+					break;
+				case 2: //run system command
+					command = "setsid " + args[i][j] + " &";
+					break;
+				case 3: //click
+					command = clickop + args[i][j];
+					break;
+				case 4: //move to workspace(relative)
+					command = workspace_r + args[i][j];
+					break;
+				case 5: //move to workspace(absolute)
+					command = workspace + args[i][j];
+					break;
+				case 6: //move cursor to position
+					command = position + args[i][j];
+					break;
+				case 7: //delay execution n milliseconds
+					delay = atoi(args[i][j].c_str()) * 1000 ;
+					usleep(delay);
+					execution = false;
+					break;
+
+	
+			}
+			if(execution)
+				pid = system(command.c_str());
 		}
-		if(options[i])
-			pid = system(command.c_str());
-		}
+	}
 };
 
 
 int main(int argc, char *argv[]) {
 	NagaDaemon daemon(argc, argv);
+	cerr << "Start daemon";
 	daemon.run();
 
 	return 0;
