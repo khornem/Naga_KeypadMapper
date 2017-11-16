@@ -74,28 +74,37 @@ public:
         int pos;
         while (getline(in, line)) {
             //Erase spaces
-            line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+            //line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
             //Ignore comments
             if (line[0] == '#')
                 continue;
             //Search option and argument
             pos = line.find("-");
             token1 = line.substr(0, pos);
+            token1.erase(std::remove(token1.begin(), token1.end(), ' '), token1.end());
             line = line.substr(pos + 1);
             pos = line.find("=");
             token2 = line.substr(0, pos);
+            token2.erase(std::remove(token2.begin(), token2.end(), ' '), token2.end());
             line = line.substr(pos + 1);
             //Encode and store mapping
             pos = stoi(token1) - 1;
             if (token2 == "chmap") options[pos].push_back(0);
             else if (token2 == "key") options[pos].push_back(1);
-            else if (token2 == "run") options[pos].push_back(2);
+            else if (token2 == "run") {
+                options[pos].push_back(2);
+                args[pos].push_back(line);
+                continue;
+            }
             else if (token2 == "click") options[pos].push_back(3);
             else if (token2 == "workspace_r") options[pos].push_back(4);
             else if (token2 == "workspace") options[pos].push_back(5);
             else if (token2 == "position") {
                 options[pos].push_back(6);
+                line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
                 std::replace(line.begin(), line.end(), ',', ' ');
+                args[pos].push_back(line);
+                continue;
             }
             else if (token2 == "delay") options[pos].push_back(7);
             else if (token2 == "media") options[pos].push_back(8);
@@ -103,6 +112,7 @@ public:
                 cerr << "Not supported key action, check the syntax in " << conf_file << ". Exiting!" << endl;
                 exit(1);
             }
+            line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
             //cerr << "b) len: " << len << " pos: " << pos << " line: " << line << " args[pos] size:" << args[pos].size() << "\n";
             args[pos].push_back(line);
         }
