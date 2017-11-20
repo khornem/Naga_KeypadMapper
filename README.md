@@ -9,13 +9,15 @@ Currently tested with:
 - Razer Naga 2014 (thanks to Destroyer) in Ubuntu 15.04, 15.10  
 - Razer Naga Molten (thanks to noobxgockel) in Linux Mint 17.02  
 - Razer Chroma (thanks to felipeacsi) in Manjaro
+- Razer Naga 2012 (RZ01-0058) (thanks to mrlinuxfish) in Arch Linux.
+- Razer Naga Chroma (thanks to ipsod) in Linux Mint KDE 18.1
 
 This daemon does not, in any case modify any system file nor property of any device. So the process is totally reversible just by deleting the files and at most rebooting. 
 
 CAUTION, in this alpha version the run option wont work for text environment commands, like for example `top`.
 As an alpha version, it is very prone to bugs and other sorts of failure. I release this project without any sort of warranty, so use under your own responsibility.
 
-##CONFIGURATION
+## CONFIGURATION
 The configuration file `mapping_xx.txt` has the following syntax:
 
     <keynumber> - <option>=<action>
@@ -42,7 +44,7 @@ The configuration file `mapping_xx.txt` has the following syntax:
     For position: x,y which are the relative position in pixel from the left upper corner of the display
     For delay: delay in milliseconds
 
-###MOUSE FUNCTION (click)
+### MOUSE FUNCTION (click)
 Button number | Info
 ------------ | -------------
 1 | left button
@@ -54,10 +56,10 @@ Button number | Info
 7 | push scroll wheel right (some mouse only)
 8 | 4th button (aka backward button)
 9 | 5th button (aka forward button)
-###KEYBOARD FUNCTION (key)
+### KEYBOARD FUNCTION (key)
 For mapping a key from keyboard you need to look up your key e.g. here: http://cgit.freedesktop.org/xorg/proto/x11proto/plain/keysymdef.h . You need to exclude the beginning `XK_` so for example caps lock would be `Caps_Lock`. 
 If you want to test your shortcut you can use `xdotool key --window getactivewindow KEYorSHORTCUT` . If no error appears the shortcut works. **Keep in mind this not only tests but also executes the shortcut.**
-###NOTES
+### NOTES
 If the `$HOME/.naga/mapping_01.txt` file is missing the daemon won't start (the program will NOT autocreate this file, the install.sh script will copy example files though).
 
 For a given action multiple actions may be defined. They will be executed sequentially.
@@ -87,7 +89,7 @@ An example `mapping_xx.txt` configuration file is the following:
 
 If you want to dig more into configuration, you might find these tools useful: `xinput`, `evtest`
 
-##INSTALLATION
+## INSTALLATION
 
 KeypadMapper does not need any dependencies besides having installed `xdotool` http://www.semicomplete.com/projects/xdotool/  (in the oficial ubuntu, fedora, centOS, etc repositories) and g++
 
@@ -97,7 +99,7 @@ Run `sudo bash install.sh` .
 This will compile the source and copy the necessary files (see `install.sh` for more info).
  
 
-##USAGE
+## USAGE
 The installation process automatically executes the daemon in the background and set it to start at boot for you. But you can still run it manually as follows:
 
 `nagastart.sh` does the below process automatically:
@@ -118,7 +120,7 @@ where [id2] is the id number of the pointer device returned by `xinput` - in cas
 
 This lasts until the x server is restarted (`nagastart.sh` is aware of this), but you can enable it back to completely restore the changes by changing the last 0 to a 1 in 2).
 
-##UNINSTALLATION
+## UNINSTALLATION
 
 You just have to delete the files created:
 
